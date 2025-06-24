@@ -5,11 +5,16 @@ import io
 import pyautogui
 import socket
 from pynput import mouse
+from cryptography.fernet import Fernet
 
 # --- Cấu hình ---
 SERVER_UPLOAD_URL = "http://127.0.0.1:8000/uploadfile/"
 SERVER_STATUS_URL = "http://127.0.0.1:8000/status"
 DEBOUNCE_SECONDS = 0.5
+
+# Khóa bí mật (cần dùng chung với server)
+SECRET_KEY = b'Qw8v1Qw2Qw8v1Qw2Qw8v1Qw2Qw8v1Qw2Qw8v1Qw2Qw8='  # 32 bytes base64
+fernet = Fernet(SECRET_KEY)
 
 # --- Biến toàn cục ---
 last_sent_time = 0
@@ -59,8 +64,10 @@ def send_screenshot_if_valid():
     last_image_hash = current_hash
     last_sent_time = now
 
-    filename = f"{hostname}_screenshot.jpg"
-    files = {"file": (filename, img_bytes, "image/jpeg")}
+    # Mã hóa dữ liệu ảnh
+    encrypted_img = fernet.encrypt(img_bytes)
+    filename = f"{hostname}_screenshot.jpg.enc"
+    files = {"file": (filename, encrypted_img, "application/octet-stream")}
 
     try:
         response = requests.post(SERVER_UPLOAD_URL, files=files)
