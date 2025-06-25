@@ -10,6 +10,7 @@ from cryptography.fernet import Fernet
 # --- Cấu hình ---
 SERVER_UPLOAD_URL = "http://127.0.0.1:8000/uploadfile/"
 SERVER_STATUS_URL = "http://127.0.0.1:8000/status"
+SERVER_LAST_HASH_URL = "http://127.0.0.1:8000/last_image_hash/"
 DEBOUNCE_SECONDS = 0.5
 
 # Khóa bí mật (cần dùng chung với server)
@@ -42,6 +43,16 @@ def get_hash(data: bytes):
     return hashlib.md5(data).hexdigest()
 
 
+def get_server_last_image_hash(client_name):
+    try:
+        resp = requests.get(SERVER_LAST_HASH_URL + client_name)
+        if resp.status_code == 200:
+            return resp.json().get("last_image_md5")
+    except Exception as e:
+        print(f"⚠️ Không lấy được hash ảnh cuối từ server: {e}")
+    return None
+
+
 def send_screenshot_if_valid():
     global last_sent_time, last_image_hash
 
@@ -57,8 +68,14 @@ def send_screenshot_if_valid():
     img_bytes = capture_screenshot_bytes()
     current_hash = get_hash(img_bytes)
 
+    # Lấy hash ảnh cuối cùng từ server để chống gửi trùng
+    server_last_hash = get_server_last_image_hash(hostname)
+    if server_last_hash and current_hash == server_last_hash:
+        print("⚠️ Ảnh trùng với ảnh cuối cùng trên server, bỏ qua.")
+        return
+
     if current_hash == last_image_hash:
-        print("⚠️ Ảnh trùng, bỏ qua.")
+        print("⚠️ Ảnh trùng với ảnh vừa gửi, bỏ qua.")
         return
 
     last_image_hash = current_hash
