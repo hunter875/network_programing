@@ -33,7 +33,7 @@ pip install fastapi uvicorn requests pynput pyautogui
 
 
 1. Chạy server:
-python server.py
+uvicorn server:app --reload
 2. Chạy client:
 python client.py
 
